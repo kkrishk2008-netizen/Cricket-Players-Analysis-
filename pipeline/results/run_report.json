@@ -1,0 +1,338 @@
+{
+  "version": "2.0",
+  "config": {
+    "w_bat_2nd": {
+      "L": 0.35,
+      "J": 0.15,
+      "C": 0.2,
+      "R": 0.1,
+      "D": 0.1,
+      "E": 0.1
+    },
+    "w_bat_1st": {
+      "L": 0.35,
+      "J": 0.15,
+      "P": 0.15,
+      "R": 0.15,
+      "D": 0.1,
+      "E": 0.1
+    },
+    "w_bowl": {
+      "L": 0.35,
+      "J": 0.15,
+      "Q": 0.1,
+      "F": 0.05,
+      "B": 0.15,
+      "S": 0.2
+    },
+    "garbage_discount": 0.5,
+    "band_q": [
+      0.5,
+      0.8,
+      0.95
+    ],
+    "markov_alpha": [
+      200.0,
+      800.0,
+      3000.0,
+      800.0
+    ],
+    "R_max": 320,
+    "S_max": 330,
+    "rb_edges": [
+      0.75,
+      1.25,
+      1.6,
+      2.0
+    ],
+    "rel_w": {
+      "level": 0.4,
+      "cons": 0.25,
+      "breadth": 0.15,
+      "impact": 0.1,
+      "conf": 0.1
+    },
+    "k_min": 30,
+    "k_max": 5000,
+    "k_delta_max": 400,
+    "pressure_weight_floor": 0.25,
+    "cons_prior": 8.0,
+    "half_life": 3.0,
+    "min_hp_balls": 60,
+    "min_innings": 8,
+    "min_inn_balls": 5,
+    "elig_mode": "or",
+    "ctx_min_bat": 20,
+    "ctx_min_bowl": 18,
+    "exclude_revised": true,
+    "exclude_no_result": true,
+    "n_sens": 30,
+    "n_boot_rank": 60,
+    "seed": 7
+  },
+  "data": {
+    "run_accounting_check": {
+      "runs_only": {
+        "exact": 0.06060606060606061,
+        "within3": 0.43686868686868685,
+        "n": 396
+      },
+      "runs+1/wide&nb (v1)": {
+        "exact": 0.11616161616161616,
+        "within3": 0.6287878787878788,
+        "n": 396
+      },
+      "runs+1/extra+extras_2 (v2)": {
+        "exact": 0.3181818181818182,
+        "within3": 0.75,
+        "n": 396
+      }
+    },
+    "target_reconciled": 115
+  },
+  "markov_tuning": {
+    "alpha_wb_rb_mem_fmt": [
+      800.0,
+      800.0,
+      3000.0,
+      3000.0
+    ],
+    "oof_logloss": 1.6091702089962507
+  },
+  "wp_calibration_oof": {
+    "raw_markov": {
+      "brier": 0.18780542348513068,
+      "logloss": 0.5667632528370735,
+      "ece": 0.0621713237237737
+    },
+    "calibrated": {
+      "brier": 0.1830180796610767,
+      "logloss": 0.5348012775561565,
+      "ece": 0.022974260811339645
+    },
+    "temperature_c": 0.8482270599933743,
+    "bias": -0.08442581624326924,
+    "brier_baseline": 0.24990009233846686,
+    "logloss_baseline": 0.6929473519260302,
+    "n_balls": 194890,
+    "note": "calibration parameters (2) fitted on the same out-of-fold predictions"
+  },
+  "markov": {
+    "expected_first_innings_total": {
+      "T20": 177.48962453644822,
+      "T20I": 175.77890143008617
+    },
+    "martingale_mean_abs_drift_after_calibration": 0.0009485293272990901,
+    "mean_abs_wp_swing_per_ball": 0.010990097616243059,
+    "order_test_logloss": {
+      "marginal_by_over": 1.6132600604267624,
+      "first_order(state, no memory)": 1.6091868501058293,
+      "second_order(state+memory)": 1.6091702089962507,
+      "memory_gain_nats_per_ball": 1.664110957855236e-05
+    }
+  },
+  "spi_thresholds_bat": [
+    3.6400293589721855,
+    5.104410409305659,
+    6.260842709526155
+  ],
+  "spi_thresholds_bowl": [
+    4.444877453618976,
+    6.007537486135917,
+    7.275567249521126
+  ],
+  "model_eb_runs": {
+    "rmse": 1.6118474434003798,
+    "rmse_baseline": 1.7410115663290178
+  },
+  "model_eb_wkt": {
+    "logloss": 0.19156685050007938,
+    "logloss_baseline": 0.2110901319306795
+  },
+  "model_ew_runs": {
+    "rmse": 1.5889638068377439,
+    "rmse_baseline": 1.7107385067512193
+  },
+  "model_ew_wkt": {
+    "logloss": 0.1820034152895625,
+    "logloss_baseline": 0.20082649006444214
+  },
+  "batting_meta": {
+    "ks": {
+      "k_main": 221.92327880744486,
+      "k_delta": 400.0,
+      "k_delta_eb": 5000.0,
+      "tau_main_per100": 15.984581582008033,
+      "tau_delta_per100": 0.0,
+      "kw_main": 128.12256708658398,
+      "kw_delta": 400.0,
+      "kw_delta_eb": 5000.0,
+      "tauw_main_per100": 0.24213114675805902,
+      "tauw_delta_per100": 0.0
+    },
+    "consistency_prior_strength": 34.85964424122613,
+    "consistency_league_rate": 0.5410488245931284,
+    "level_spread_ratio": 0.47403603040680864,
+    "n_balls": 187573,
+    "n_hp_balls": 37454,
+    "n_players": 762,
+    "n_eligible": 174,
+    "hp_share_innings2": 0.5812730282479842,
+    "hp_shift_npv100": -1.011931170356875
+  },
+  "bowling_meta": {
+    "ks": {
+      "k_main": 383.8200612909089,
+      "k_delta": 400.0,
+      "k_delta_eb": 5000.0,
+      "tau_main_per100": 12.045522082752782,
+      "tau_delta_per100": 0.0,
+      "kw_main": 208.09312401753775,
+      "kw_delta": 400.0,
+      "kw_delta_eb": 5000.0,
+      "tauw_main_per100": 0.18724772322981062,
+      "tauw_delta_per100": 0.0
+    },
+    "consistency_prior_strength": 169.46474124445442,
+    "consistency_league_rate": 0.44110344827586206,
+    "level_spread_ratio": 0.4549318856992869,
+    "n_balls": 195069,
+    "n_hp_balls": 39014,
+    "n_players": 558,
+    "n_eligible": 184,
+    "hp_share_innings2": 0.6748090429076742,
+    "hp_shift_npv100": -3.66679647463997
+  },
+  "validation": {
+    "dir_after_wicket": {
+      "spi_bat_after": 4.38622415022354,
+      "spi_bat_other": 3.6047899985675502,
+      "LI_after": 1.100649202125907,
+      "LI_other": 0.9945173736711708,
+      "note": "bowler SPI is expected to FALL after a wicket (margin grows)",
+      "spi_bowl_after": 3.440993040454544,
+      "spi_bowl_other": 4.45592894473639
+    },
+    "dir_below_rrr_over": {
+      "spi_after_below": 4.2527385910599085,
+      "spi_after_above": 3.3449009426528207,
+      "n": 14296
+    },
+    "spi_vs_leverage_spearman": {
+      "bat": 0.7560545176489214,
+      "bowl": 0.7738046286486056
+    },
+    "hp_composition_bat": {
+      "share_innings2": 0.5808940380376275,
+      "share_death": 0.3637412211001179,
+      "share_powerplay": 0.13923207053878095
+    },
+    "split_half_bat": {
+      "n_players": 173,
+      "level": {
+        "pearson": 0.1815211163541044,
+        "spearman": 0.11861299488715114
+      },
+      "level_base": {
+        "pearson": 0.2042967065103341,
+        "spearman": 0.12645377808474445
+      },
+      "clutch_delta": {
+        "pearson": 0.09599070214455294,
+        "spearman": 0.04853266336316988
+      },
+      "impact": {
+        "pearson": 0.2989849447185125,
+        "spearman": 0.2790790382467054
+      },
+      "consistency": {
+        "pearson": 0.18433163266569913,
+        "spearman": 0.1807980380832263
+      },
+      "breadth": {
+        "pearson": 0.2013816595602505,
+        "spearman": 0.1348809396887791
+      },
+      "npv100_raw_v2": {
+        "pearson": 0.06190888017155468,
+        "spearman": 0.05857294501022106
+      },
+      "npv100_raw_v1": {
+        "pearson": 0.18866897007547584,
+        "spearman": 0.14854842373140625
+      },
+      "wpa100_raw": {
+        "pearson": 0.12981017300481326,
+        "spearman": 0.1482355340678901
+      }
+    },
+    "split_half_bowl": {
+      "n_players": 196,
+      "level": {
+        "pearson": 0.1510280632359401,
+        "spearman": 0.12512650511200185
+      },
+      "level_base": {
+        "pearson": 0.18417664415575177,
+        "spearman": 0.14532429137215216
+      },
+      "clutch_delta": {
+        "pearson": 0.07240711487105703,
+        "spearman": 0.07713982898899506
+      },
+      "impact": {
+        "pearson": 0.21224947319045684,
+        "spearman": 0.1931388408545769
+      },
+      "consistency": {
+        "pearson": 0.04263677882744654,
+        "spearman": -0.011176336648461443
+      },
+      "breadth": {
+        "pearson": 0.1962899226204404,
+        "spearman": 0.14881009301247375
+      },
+      "npv100_raw_v2": {
+        "pearson": 0.007988855400235187,
+        "spearman": 0.03060029165902988
+      },
+      "npv100_raw_v1": {
+        "pearson": -0.044384031873055035,
+        "spearman": -0.005960681812748528
+      },
+      "wpa100_raw": {
+        "pearson": 0.018198802967391868,
+        "spearman": 0.0639944536971368
+      }
+    },
+    "weight_sens_bat_top15_overlap": {
+      "mean": 14.733333333333333,
+      "min": 13,
+      "max": 15
+    },
+    "shrink_sens_bat_top15_overlap": {
+      "k_delta=30": 11,
+      "k_delta=60": 12,
+      "k_delta=100": 13,
+      "k_delta=300": 15,
+      "k_delta=1000": 15,
+      "k_main x0.5": 15,
+      "k_main x2.0": 15
+    },
+    "weight_sens_bowl_top15_overlap": {
+      "mean": 13.8,
+      "min": 12,
+      "max": 15
+    },
+    "shrink_sens_bowl_top15_overlap": {
+      "k_delta=30": 12,
+      "k_delta=60": 13,
+      "k_delta=100": 13,
+      "k_delta=300": 15,
+      "k_delta=1000": 14,
+      "k_main x0.5": 15,
+      "k_main x2.0": 15
+    }
+  },
+  "runtime_sec": 186.5
+}

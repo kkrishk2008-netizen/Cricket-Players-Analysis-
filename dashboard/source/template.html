@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reliable Under Pressure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a scoreboard-style page. The tied match chart opens it, the pressure recipe explains it,
+   then a dense, filterable ranking table. Pink carries pressure (one sequential ramp); blue/orange only mark innings. */
+:root{
+  --paper:#f3f4f9; --surface:#ffffff; --ink:#1c1f33; --muted:#5b5f78; --line:#dcdfeb; --soft:#eceef6;
+  --accent:#b8165a; --accent-ink:#ffffff;
+  --p1:#fbe4ee; --p2:#f3a6c6; --p3:#dc4f8c; --p4:#97114a;
+  --inn1:#2a78d6; --inn2:#eb6834; --neg:#7b819c;
+  --font-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#171a2c; --surface:#20243a; --ink:#eceef8; --muted:#a6aac4; --line:#353a5c; --soft:#272b45;
+    --accent:#f0679f; --accent-ink:#1c1f33;
+    --p1:#3a2133; --p2:#7c2453; --p3:#c93a7c; --p4:#f48ab8;
+    --inn1:#5b9cf0; --inn2:#f28a5c; --neg:#8d93b3; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#171a2c; --surface:#20243a; --ink:#eceef8; --muted:#a6aac4; --line:#353a5c; --soft:#272b45;
+  --accent:#f0679f; --accent-ink:#1c1f33;
+  --p1:#3a2133; --p2:#7c2453; --p3:#c93a7c; --p4:#f48ab8;
+  --inn1:#5b9cf0; --inn2:#f28a5c; --neg:#8d93b3; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--font-body);}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+.num{font-variant-numeric:tabular-nums}
+
+/* header */
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:24px;height:56px}
+.brand{font:700 22px/1 var(--font-display);letter-spacing:.01em;margin:0}
+.top nav{display:flex;gap:4px;margin-left:auto}
+.top nav a{color:var(--muted);text-decoration:none;font-weight:600;font-size:14px;padding:6px 12px;border-radius:999px}
+.top nav a:hover{color:var(--ink);background:var(--soft)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:40px;padding:44px 0 28px;align-items:start}
+h1{font:700 clamp(40px,5.4vw,68px)/.95 var(--font-display);margin:0 0 18px;text-wrap:balance;letter-spacing:-.005em}
+h2{font:700 clamp(30px,3.4vw,42px)/1 var(--font-display);margin:0 0 10px;text-wrap:balance}
+h3{font:600 22px/1.15 var(--font-display);margin:0 0 6px;letter-spacing:.01em}
+.lede{font-size:18px;max-width:34em;margin:0 0 14px}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.facts{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:18px;font-size:14px;color:var(--muted)}
+.facts b{color:var(--ink);font:600 20px/1 var(--font-display);margin-right:4px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.chart-head{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+svg text{fill:var(--muted);font:12px var(--font-body)}
+.readout{min-height:44px;font-size:14px;margin-top:6px;padding:8px 10px;background:var(--soft);border-radius:6px}
+.readout b{font-weight:600}
+
+section{padding:40px 0;border-top:1px solid var(--line)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+.seg{display:inline-flex;background:var(--soft);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--muted);font:600 14px var(--font-body);padding:6px 14px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.recipe{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:10px}
+.recipe li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;align-items:start}
+.recipe .w{font:700 24px/1 var(--font-display);color:var(--accent);text-align:right;padding-top:2px}
+.recipe .bar{height:6px;border-radius:3px;background:var(--p3);margin:4px 0 4px}
+.recipe .name{font-weight:600}
+.recipe .desc{font-size:14px;color:var(--muted)}
+.formula{font:500 15px/1.5 ui-monospace,Menlo,Consolas,monospace;background:var(--soft);padding:10px 12px;border-radius:6px;margin:14px 0 0;overflow-x:auto}
+.bands{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:14px}
+.band{padding:10px 12px;border-radius:6px;font-size:13px}
+.band strong{display:block;font:600 18px/1.1 var(--font-display)}
+.b-Low{background:var(--p1);color:var(--ink)} .b-Medium{background:var(--p2);color:var(--ink)}
+.b-High{background:var(--p3);color:#fff} .b-Extreme{background:var(--p4);color:#fff}
+:root[data-theme="dark"] .b-Extreme{color:#1c1f33}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .b-Extreme{color:#1c1f33}}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:18px}
+.step{border-top:3px solid var(--p3);padding-top:10px}
+.step .pct{font:700 28px/1 var(--font-display);color:var(--accent)}
+.step p{margin:4px 0 0;font-size:14px;color:var(--muted)}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:18px 0 0;max-width:62em}
+
+/* rankings */
+.rank-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.tabs{display:inline-flex;gap:4px;border-bottom:2px solid var(--line)}
+.tabs button{border:0;background:none;font:700 26px/1 var(--font-display);color:var(--muted);padding:6px 14px 10px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px 16px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.f label,.f .lab{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:5px}
+.f input[type=search],.f select{width:100%;font:500 15px var(--font-body);padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)}
+.f input[type=range]{width:100%;accent-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);font:500 13px var(--font-body);padding:5px 10px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.f.wide{grid-column:span 2}
+.status{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 8px;font-size:14px;color:var(--muted)}
+.linkbtn{border:0;background:none;color:var(--accent);font:600 14px var(--font-body);cursor:pointer;padding:4px}
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:1060px;font-size:14px}
+thead th{position:sticky;top:0;background:var(--surface);text-align:left;font-weight:600;color:var(--muted);font-size:13px;border-bottom:1px solid var(--line);padding:0;white-space:nowrap}
+thead th button{all:unset;cursor:pointer;display:block;padding:10px 10px}
+thead th button:focus-visible{outline:2px solid var(--accent)}
+thead th[aria-sort="descending"] button::after{content:" ▼";color:var(--accent)}
+thead th[aria-sort="ascending"] button::after{content:" ▲";color:var(--accent)}
+thead th.r, td.r{text-align:right}
+tbody td{padding:9px 10px;border-bottom:1px solid var(--soft);vertical-align:middle}
+tbody tr.row:hover{background:var(--soft)}
+.pos{font:700 20px/1 var(--font-display);color:var(--muted);width:40px}
+.who button{all:unset;cursor:pointer;font-weight:600;color:var(--ink)}
+.who button:hover{color:var(--accent)}
+.who button:focus-visible{outline:2px solid var(--accent)}
+.who .sub{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.cap{border-color:transparent;background:var(--soft);color:var(--ink)}
+.pill.unc{border-color:var(--accent);color:var(--accent)}
+.pill.ph{background:var(--p1);border-color:transparent;color:var(--ink)}
+.relbar{display:flex;align-items:center;gap:8px}
+.relbar span.track{flex:1;height:8px;background:var(--soft);border-radius:4px;overflow:hidden;min-width:70px}
+.relbar span.fill{display:block;height:100%;background:var(--p3);border-radius:4px}
+.ci text{font-size:11px}
+.detail td{background:var(--paper);padding:18px 16px 22px}
+.detail-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr);gap:24px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:0}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:600}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.tip{position:fixed;pointer-events:none;z-index:50;background:var(--ink);color:var(--paper);font-size:13px;line-height:1.4;padding:8px 10px;border-radius:6px;max-width:260px;opacity:0;transition:opacity .12s}
+.notes{font-size:14px;color:var(--muted);max-width:70em}
+.notes li{margin-bottom:6px}
+footer{padding:28px 0 48px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+
+@media (max-width: 900px){
+  .hero,.grid2,.detail-grid{grid-template-columns:1fr}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .f.wide{grid-column:auto}
+  .top nav a{padding:6px 8px}
+}
+@media (max-width: 480px){
+  .bands{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .brand{font-size:18px}
+  .top nav{display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <p class="brand">SupeRR Selector · Pressure Index</p>
+    <nav aria-label="Sections">
+      <a href="#pressure">Pressure</a>
+      <a href="#scoring">Scoring</a>
+      <a href="#rankings">Rankings</a>
+      <a href="#notes">Notes</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+  <div class="hero" id="pressure">
+    <div>
+      <h1>Who stays reliable when the game is on the line</h1>
+      <p class="lede">Pressure on a ball is how much the result can swing on it, plus how far behind the side is and the stresses of the moment: a climbing required rate, a run of dots, walking in after a collapse.</p>
+      <p class="muted">The chart is a real tied T20I, ball by ball. The top line is the chance that the side batting first wins, from our Markov model of the innings. The bottom line is the batter's pressure score (SPI, 0 to 10). Hover or tap to read any ball.</p>
+      <div class="facts" id="facts"></div>
+    </div>
+    <div class="panel" aria-label="Win probability and pressure through a tied match">
+      <div class="chart-head">
+        <h3 id="match-title">Sample match</h3>
+        <div class="legend" id="worm-legend"></div>
+      </div>
+      <svg id="worm" role="img" aria-label="Win probability and pressure index by ball" width="100%" viewBox="0 0 680 400"></svg>
+      <div class="readout" id="readout" aria-live="polite">Hover over the chart to read a ball.</div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap grid2">
+    <div>
+      <h2>How the pressure score is built</h2>
+      <p class="muted">Every ball gets a score from 0 to 10. The biggest ingredient is leverage, the expected swing in win probability on that ball. The rest describes the situation the player is in. Pick a view:</p>
+      <div class="seg" role="group" aria-label="Pressure recipe" id="recipe-tabs">
+        <button type="button" data-k="bat2" aria-pressed="true">Batter, chasing</button>
+        <button type="button" data-k="bat1" aria-pressed="false">Batter, setting</button>
+        <button type="button" data-k="bowl" aria-pressed="false">Bowler</button>
+      </div>
+      <ul class="recipe" id="recipe"></ul>
+      <p class="formula">SPI = 10 × Σ weight × component × (0.5 + 0.5 × game alive)</p>
+      <p class="small muted">"Game alive" is 1 while either side has at least a 10% chance and falls toward 0 once the game is decided, so a lost cause counts for half.</p>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="chart-head">
+          <h3>Where the stakes are in a run chase</h3>
+          <span class="small muted">mean leverage, 1.0 = average ball</span>
+        </div>
+        <svg id="heat" role="img" aria-label="Mean leverage by over and wickets down in run chases" width="100%" viewBox="0 0 560 330"></svg>
+        <p class="small muted" style="margin:6px 0 0">Leverage climbs late in the chase and when wickets fall in the middle overs. Blank cells have fewer than 30 balls.</p>
+      </div>
+      <h3 style="margin-top:22px">Pressure bands</h3>
+      <p class="small muted" style="margin:0">Cut-offs are percentiles of every ball in the data. High and Extreme together are the high-pressure balls (top 20%) used for the rankings.</p>
+      <div class="bands" id="bands"></div>
+    </div>
+  </div>
+</section>
+
+<section id="scoring">
+  <div class="wrap">
+    <h2>How players are scored</h2>
+    <p class="muted" style="max-width:62em">Each ball is compared with what an average player would do in the same situation. Runs above expectation count for the batter; a dismissal costs whatever a wicket is worth at that moment of the innings. Estimates adjust for the quality of the opposition and are pulled toward the average when the sample is small.</p>
+    <div class="steps">
+      <div class="step"><div class="pct">40%</div><h3>Pressure level</h3><p>Runs above expectation per 100 high-pressure balls, adjusted for opposition.</p></div>
+      <div class="step"><div class="pct">25%</div><h3>Consistency</h3><p>Share of high-pressure innings or spells that finished above expectation.</p></div>
+      <div class="step"><div class="pct">15%</div><h3>Breadth</h3><p>How many pressure situations (chasing, death, vs spin…) he is above average in.</p></div>
+      <div class="step"><div class="pct">10%</div><h3>Impact</h3><p>Win probability added per 100 high-pressure balls, in percentage points.</p></div>
+      <div class="step"><div class="pct">10%</div><h3>Evidence</h3><p>How many high-pressure balls the rating rests on.</p></div>
+    </div>
+    <p class="callout">The data shows real differences in ability between players, but no measurable extra "clutch" skill on high-pressure balls beyond that ability. So a player's pressure level is his all-round ability, with high-pressure balls weighted more, plus a small, heavily shrunk adjustment for how he did under pressure.</p>
+  </div>
+</section>
+
+<section id="rankings">
+  <div class="wrap">
+    <div class="rank-head">
+      <div>
+        <h2>Player rankings</h2>
+        <p class="muted" style="margin:0">Players with at least 60 high-pressure balls or 8 high-pressure innings, 2022–2026. Select a name for the full profile.</p>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Role">
+        <button type="button" role="tab" id="tab-batters" aria-selected="true" aria-controls="rank-panel">Batters</button>
+        <button type="button" role="tab" id="tab-bowlers" aria-selected="false" aria-controls="rank-panel">Bowlers</button>
+      </div>
+    </div>
+
+    <div id="rank-panel" role="tabpanel">
+      <form class="filters" id="filters" onsubmit="return false">
+        <div class="f">
+          <label for="q">Search player</label>
+          <input type="search" id="q" placeholder="Name or IPL team" autocomplete="off">
+        </div>
+        <div class="f">
+          <label for="country">Country</label>
+          <select id="country"></select>
+        </div>
+        <div class="f">
+          <span class="lab" id="cap-lab">International status</span>
+          <div class="seg" role="group" aria-labelledby="cap-lab" id="cap">
+            <button type="button" data-v="all" aria-pressed="true">All</button>
+            <button type="button" data-v="capped" aria-pressed="false">Capped</button>
+            <button type="button" data-v="uncapped" aria-pressed="false">Uncapped</button>
+          </div>
+        </div>
+        <div class="f">
+          <label for="sort">Sort by</label>
+          <select id="sort"></select>
+        </div>
+        <div class="f wide">
+          <span class="lab" id="pos-lab">Batting position</span>
+          <div class="chips" role="group" aria-labelledby="pos-lab" id="pos"></div>
+        </div>
+        <div class="f" id="kind-wrap">
+          <span class="lab" id="kind-lab">Batting hand</span>
+          <div class="chips" role="group" aria-labelledby="kind-lab" id="kind"></div>
+        </div>
+        <div class="f">
+          <label for="minn">Minimum high-pressure balls: <span id="minn-v" class="num">0</span></label>
+          <input type="range" id="minn" min="0" max="600" step="20" value="0">
+        </div>
+      </form>
+
+      <div class="status">
+        <span id="count" aria-live="polite"></span>
+        <button type="button" class="linkbtn" id="reset">Clear filters</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="thead"></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <p class="small muted" id="phase-hint" style="margin-top:8px"></p>
+    </div>
+  </div>
+</section>
+
+<section id="notes">
+  <div class="wrap">
+    <h2>Notes</h2>
+    <ul class="notes">
+      <li><b>International status.</b> Capped status and country come from T20I appearances in the data (2022–2026). Internationals capped only in other formats or before 2022 were corrected by hand and are marked "status corrected by hand" in their profile. Players with no international appearance are listed as uncapped Indian domestic players. Check current status before the auction.</li>
+      <li><b>Batting position</b> is the player's median batting position across his innings. <b>Bowling phase</b> tags mark phases where a bowler sends down a large share of his balls (powerplay ≥ 30%, middle overs ≥ 45%, death ≥ 25%). His main phase is the one he bowls most relative to the league average.</li>
+      <li><b>Pressure level</b> is runs above expectation per 100 high-pressure balls (bowlers: runs saved, with wickets valued). The bar shows a 90% interval; wide bars mean little evidence. <b>P(top 10)</b> is how often the player stayed in the top 10 when matches were resampled 60 times, shown for the top 30.</li>
+      <li><b>Phase and situation levels</b> (for example "Pressure level, death") use only that slice of high-pressure balls and are shown when the player has at least 18–20 such balls.</li>
+      <li>Win probability comes from a Markov model of every delivery, solved exactly for each format and calibrated on held-out matches.</li>
+    </ul>
+  </div>
+</section>
+</main>
+<footer><div class="wrap">SupeRR Selector S2 · Round 1 · Pressure Index v2. Built from <span class="num" id="foot-n"></span> deliveries.</div></footer>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+const DATA = /*__DATA__*/;
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const fmt = (v, d = 1) => v == null || Number.isNaN(v) ? "–" : Number(v).toFixed(d);
+const sgn = (v, d = 1) => v == null ? "–" : (v > 0 ? "+" : "") + Number(v).toFixed(d);
+const pct = (v, d = 0) => v == null ? "–" : (100 * v).toFixed(d) + "%";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs = {}, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+const tip = $("#tip");
+function showTip(html, ev) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const x = Math.min(ev.clientX + 14, window.innerWidth - 270), y = ev.clientY + 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => tip.style.opacity = 0;
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ---------- facts ---------- */
+(function facts() {
+  const m = DATA.meta;
+  $("#facts").innerHTML = `<span><b class="num">${m.n_matches}</b>matches</span><span><b class="num">${(m.n_balls/1000).toFixed(0)}k</b>deliveries</span>
+    <span><b class="num">${DATA.batters.length}</b>batters ranked</span><span><b class="num">${DATA.bowlers.length}</b>bowlers ranked</span>`;
+  $("#foot-n").textContent = m.n_balls.toLocaleString();
+})();
+
+/* ---------- match worm ---------- */
+function drawWorm() {
+  const S = DATA.sample, svg = $("#worm"); svg.innerHTML = "";
+  $("#match-title").textContent = `${S.match}, ${S.date}`;
+  $("#worm-legend").innerHTML = `<span><i style="background:var(--inn1)"></i>${esc(S.bat1)} batting</span><span><i style="background:var(--inn2)"></i>${esc(S.bat2)} batting</span>`;
+  const W = 680, L = 44, R = 12, X = i => L + (W - L - R) * i / 239;
+  const top = {y0: 12, h: 170}, bot = {y0: 222, h: 140};
+  const balls = S.balls.map(b => ({...b, x: (b.i === 2 ? 120 : 0) + b.b}));
+  const Yw = v => top.y0 + top.h * (1 - v), Ys = v => bot.y0 + bot.h * (1 - v / 10);
+  // grids
+  [0, .25, .5, .75, 1].forEach(v => {
+    el("line", {x1: L, x2: W - R, y1: Yw(v), y2: Yw(v), stroke: "var(--line)", "stroke-width": v === .5 ? 1.2 : .6}, svg);
+    el("text", {x: L - 6, y: Yw(v) + 4, "text-anchor": "end"}, svg).textContent = (v * 100) + "%";
+  });
+  [0, 5, 10].forEach(v => {
+    el("line", {x1: L, x2: W - R, y1: Ys(v), y2: Ys(v), stroke: "var(--line)", "stroke-width": .6}, svg);
+    el("text", {x: L - 6, y: Ys(v) + 4, "text-anchor": "end"}, svg).textContent = v;
+  });
+  const th = DATA.thresholds.bat[1];
+  el("line", {x1: L, x2: W - R, y1: Ys(th), y2: Ys(th), stroke: "var(--p3)", "stroke-dasharray": "4 4", "stroke-width": 1}, svg);
+  el("text", {x: L + 4, y: Ys(th) - 5, "text-anchor": "start", style: "fill:var(--accent)"}, svg).textContent = "high-pressure band";
+  el("text", {x: L + 4, y: top.y0 + 12}, svg).textContent = `P(${S.bat1} win)`;
+  el("text", {x: L + 4, y: bot.y0 + 12}, svg).textContent = "Batter pressure (6-ball average)";
+  el("line", {x1: X(120), x2: X(120), y1: top.y0, y2: bot.y0 + bot.h, stroke: "var(--muted)", "stroke-width": .8, "stroke-dasharray": "2 3"}, svg);
+  [0, 60, 120, 180, 239].forEach(i => el("text", {x: X(i), y: 392, "text-anchor": "middle"}, svg).textContent =
+    i === 0 ? "Ov 1" : i === 60 ? "Ov 10" : i === 120 ? "2nd inns" : i === 180 ? "Ov 10" : "Ov 20");
+  // wickets
+  for (let k = 1; k < balls.length; k++) if (balls[k].i === balls[k-1].i && balls[k].wk > balls[k-1].wk)
+    el("line", {x1: X(balls[k].x), x2: X(balls[k].x), y1: top.y0, y2: bot.y0 + bot.h, stroke: "var(--muted)", "stroke-opacity": .28}, svg);
+  for (const inn of [1, 2]) {
+    const b = balls.filter(d => d.i === inn), col = inn === 1 ? "var(--inn1)" : "var(--inn2)";
+    el("path", {d: b.map((d, k) => (k ? "L" : "M") + X(d.x).toFixed(1) + "," + Yw(d.wp1).toFixed(1)).join(""), fill: "none", stroke: col, "stroke-width": 2.2}, svg);
+    const roll = b.map((d, k) => { const s = b.slice(Math.max(0, k - 5), k + 1); return s.reduce((a, c) => a + c.spi, 0) / s.length; });
+    el("path", {d: b.map((d, k) => (k ? "L" : "M") + X(d.x).toFixed(1) + "," + Ys(roll[k]).toFixed(1)).join(""), fill: "none", stroke: col, "stroke-width": 2.2}, svg);
+    b.forEach((d, k) => d.roll = roll[k]);
+  }
+  const cross = el("line", {y1: top.y0, y2: bot.y0 + bot.h, stroke: "var(--ink)", "stroke-width": 1, opacity: 0}, svg);
+  const dot1 = el("circle", {r: 4.5, fill: "var(--surface)", "stroke-width": 2, opacity: 0}, svg);
+  const dot2 = el("circle", {r: 4.5, fill: "var(--surface)", "stroke-width": 2, opacity: 0}, svg);
+  const hit = el("rect", {x: L, y: 0, width: W - L - R, height: 380, fill: "transparent", tabindex: 0, "aria-label": "Move along the match"}, svg);
+  let cur = 230;
+  function show(idx) {
+    const d = balls[Math.max(0, Math.min(balls.length - 1, idx))]; cur = balls.indexOf(d);
+    const x = X(d.x), col = d.i === 1 ? "var(--inn1)" : "var(--inn2)";
+    cross.setAttribute("x1", x); cross.setAttribute("x2", x); cross.setAttribute("opacity", .5);
+    for (const [c, y] of [[dot1, Yw(d.wp1)], [dot2, Ys(d.roll)]]) { c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("stroke", col); c.setAttribute("opacity", 1); }
+    const ov = Math.floor(d.b / 6) + "." + (d.b % 6);
+    const side = d.i === 1 ? S.bat1 : S.bat2;
+    const state = d.i === 2 ? `${d.sc}/${d.wk}, need ${d.need} off ${120 - d.b}` : `${d.sc}/${d.wk}`;
+    $("#readout").innerHTML = `<b>${esc(side)} ${ov} ov</b> · ${state} · P(${esc(S.bat1)} win) <b class="num">${pct(d.wp1)}</b> · pressure <b class="num">${fmt(d.spi)}</b> · leverage <b class="num">${fmt(d.li, 2)}</b>`;
+  }
+  hit.addEventListener("pointermove", e => {
+    const r = svg.getBoundingClientRect(), vx = (e.clientX - r.left) * 680 / r.width;
+    const i = Math.round((vx - L) / ((W - L - R) / 239));
+    let best = 0, bd = 1e9; balls.forEach((d, k) => { const dd = Math.abs(d.x - i); if (dd < bd) { bd = dd; best = k; } });
+    show(best);
+  });
+  hit.addEventListener("keydown", e => { if (e.key === "ArrowRight") { show(cur + 1); e.preventDefault(); } if (e.key === "ArrowLeft") { show(cur - 1); e.preventDefault(); } });
+  show(balls.length - 1);
+  $("#readout").insertAdjacentHTML("beforeend", `<br><span class="muted">${esc(S.result)}. ${esc(S.comp)}.</span>`);
+}
+
+/* ---------- recipe ---------- */
+const RECIPES = {
+  bat2: [["Leverage", 35, "How much the result can swing on this ball, from the Markov model."],
+         ["Jeopardy", 15, "How far behind the batting side is on win probability."],
+         ["Chase difficulty", 20, "Runs needed compared with what the remaining balls and wickets usually produce."],
+         ["Resources lost", 10, "Share of the innings' scoring potential already used up (balls and wickets)."],
+         ["Dot squeeze", 10, "Dots in the last six balls, plus a bump for a streak of four or more."],
+         ["New batter", 10, "Just arrived, especially straight after a wicket or collapse."]],
+  bat1: [["Leverage", 35, "How much the result can swing on this ball."],
+         ["Jeopardy", 15, "How far behind the batting side is on win probability."],
+         ["Below par", 15, "How far the projected total sits below an average first-innings score."],
+         ["Resources lost", 15, "Share of the innings' scoring potential already used up."],
+         ["Dot squeeze", 10, "Dots in the last six balls, plus a bump for a streak of four or more."],
+         ["New batter", 10, "Just arrived, especially straight after a wicket or collapse."]],
+  bowl: [["Leverage", 35, "How much the result can swing on this ball."],
+         ["Jeopardy", 15, "How far behind the bowling side is on win probability."],
+         ["Set batter", 20, "Facing a batter who has settled in and is scoring freely."],
+         ["Boundary momentum", 15, "Boundaries and extras conceded in the last six balls."],
+         ["Phase", 10, "Death overs highest, then the powerplay, then the middle overs."],
+         ["Wickets in hand", 5, "More batting to come means less room for error."]]
+};
+function drawRecipe(k) {
+  document.querySelectorAll("#recipe-tabs button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === k));
+  $("#recipe").innerHTML = RECIPES[k].map(([n, w, d]) => `<li><span class="w num">${w}%</span><div><span class="name">${n}</span>
+    <div class="bar" style="width:${w / 35 * 100}%"></div><span class="desc">${d}</span></div></li>`).join("");
+}
+document.querySelectorAll("#recipe-tabs button").forEach(b => b.addEventListener("click", () => drawRecipe(b.dataset.k)));
+
+/* ---------- heatmap ---------- */
+function mix(a, b, t) { // hex colors
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const A = p(a), B = p(b); return "rgb(" + A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",") + ")";
+}
+function ramp(t) { const s = [css("--p1"), css("--p2"), css("--p3"), css("--p4")]; t = Math.max(0, Math.min(1, t)) * 3;
+  const i = Math.min(2, Math.floor(t)); return mix(s[i], s[i + 1], t - i); }
+function drawHeat() {
+  const svg = $("#heat"); svg.innerHTML = "";
+  const H = DATA.heatmap, L = 40, T = 8, cw = (560 - L - 10) / 20, ch = 26;
+  const vals = H.flat().filter(v => v != null), vmax = Math.min(Math.max(...vals), 4.5);
+  H.forEach((row, w) => row.forEach((v, o) => {
+    const y = T + (9 - w) * ch, x = L + o * cw;
+    const r = el("rect", {x: x + 1, y: y + 1, width: cw - 2, height: ch - 2, rx: 3,
+      fill: v == null ? "transparent" : ramp(Math.log(v / .2) / Math.log(vmax / .2)), stroke: v == null ? "var(--line)" : "none", "stroke-dasharray": v == null ? "2 2" : null}, svg);
+    if (v != null) {
+      r.addEventListener("pointermove", e => showTip(`Over ${o + 1}, ${w} wicket${w === 1 ? "" : "s"} down<br>Mean leverage <b>${v.toFixed(2)}</b>`, e));
+      r.addEventListener("pointerleave", hideTip);
+    }
+  }));
+  for (let w = 0; w < 10; w++) el("text", {x: L - 8, y: T + (9 - w) * ch + ch / 2 + 4, "text-anchor": "end"}, svg).textContent = w;
+  [1, 5, 10, 15, 20].forEach(o => el("text", {x: L + (o - .5) * cw, y: T + 10 * ch + 16, "text-anchor": "middle"}, svg).textContent = o);
+  el("text", {x: L + 10 * cw, y: T + 10 * ch + 32, "text-anchor": "middle"}, svg).textContent = "over";
+  el("text", {x: 10, y: T + 5 * ch, transform: `rotate(-90 10 ${T + 5 * ch})`, "text-anchor": "middle"}, svg).textContent = "wickets down";
+}
+
+/* ---------- bands ---------- */
+function drawBands() {
+  const tb = DATA.thresholds.bat, tw = DATA.thresholds.bowl;
+  const rows = [["Low", "bottom 50%", `< ${fmt(tb[0])}`, `< ${fmt(tw[0])}`], ["Medium", "50–80%", `${fmt(tb[0])}–${fmt(tb[1])}`, `${fmt(tw[0])}–${fmt(tw[1])}`],
+                ["High", "80–95%", `${fmt(tb[1])}–${fmt(tb[2])}`, `${fmt(tw[1])}–${fmt(tw[2])}`], ["Extreme", "top 5%", `≥ ${fmt(tb[2])}`, `≥ ${fmt(tw[2])}`]];
+  $("#bands").innerHTML = rows.map(([n, p, b, w]) => `<div class="band b-${n}"><strong>${n}</strong>${p}<br>bat ${b}<br>bowl ${w}</div>`).join("");
+}
+
+/* ---------- rankings ---------- */
+const COUNTRY_ORDER = (role) => {
+  const c = {}; DATA[role].forEach(p => c[p.country] = (c[p.country] || 0) + 1);
+  return Object.keys(c).sort((a, b) => c[b] - c[a] || a.localeCompare(b)).map(k => [k, c[k]]);
+};
+const BAT_POS = ["Opener", "Top order (3)", "Middle order (4-5)", "Finisher (6-7)", "Lower order (8+)"];
+const PHASES = ["Powerplay", "Middle overs", "Death"];
+const PHASE_KEY = {"Powerplay": "level_powerplay", "Middle overs": "level_middle", "Death": "level_death"};
+const SORTS = {
+  batters: [["reliability", "Reliability score"], ["level", "Pressure level"], ["impact", "Impact (win %)"], ["consistency", "Consistency"],
+            ["breadth", "Breadth"], ["n", "High-pressure balls"], ["p_top10", "P(top 10)"], ["level_chasing", "Pressure level, chasing"],
+            ["level_setting", "Pressure level, setting"], ["level_death", "Pressure level, death overs"], ["level_collapse_entry", "Pressure level, after a collapse"],
+            ["level_vs_spin", "Pressure level vs spin"], ["level_vs_pace", "Pressure level vs pace"], ["runs_per100", "Runs per 100 HP balls"], ["name", "Name"]],
+  bowlers: [["reliability", "Reliability score"], ["level", "Pressure level"], ["impact", "Impact (win %)"], ["consistency", "Consistency"],
+            ["breadth", "Breadth"], ["n", "High-pressure balls"], ["p_top10", "P(top 10)"], ["level_powerplay", "Pressure level, powerplay"],
+            ["level_middle", "Pressure level, middle overs"], ["level_death", "Pressure level, death overs"], ["level_defending", "Pressure level, defending"],
+            ["level_vs_set_batter", "Pressure level vs set batter"], ["economy", "Economy in HP balls (low first)"], ["name", "Name"]]
+};
+DATA.bowlers.forEach(p => p.economy = p.runs_per100 != null ? 6 * p.runs_per100 / 100 : null);
+const ASC = new Set(["name", "economy"]);
+const state = {role: "batters", q: "", country: "", cap: "all", pos: new Set(), kind: new Set(), minn: 0, sort: "reliability", asc: false, open: null};
+const RANGE = {};
+for (const r of ["batters", "bowlers"]) {
+  const P = DATA[r];
+  RANGE[r] = {rel: [Math.min(...P.map(p => p.reliability)), Math.max(...P.map(p => p.reliability))],
+              ci: [Math.min(...P.map(p => p.level_lo90)), Math.max(...P.map(p => p.level_hi90))]};
+}
+
+function setupControls() {
+  const role = state.role;
+  $("#country").innerHTML = `<option value="">All countries</option>` + COUNTRY_ORDER(role).map(([c, n]) => `<option value="${esc(c)}">${esc(c)} (${n})</option>`).join("");
+  $("#country").value = state.country;
+  $("#sort").innerHTML = SORTS[role].map(([k, n]) => `<option value="${k}">${n}</option>`).join("");
+  $("#sort").value = state.sort;
+  const posOpts = role === "batters" ? BAT_POS : PHASES;
+  $("#pos-lab").textContent = role === "batters" ? "Batting position" : "Bowling phase";
+  $("#pos").innerHTML = posOpts.map(v => `<button type="button" class="chip" data-v="${v}" aria-pressed="${state.pos.has(v)}">${v.replace(" (", " · ").replace(")", "")}</button>`).join("");
+  const kinds = role === "batters" ? [["RHB", "Right-handed"], ["LHB", "Left-handed"]] : [["Pace", "Pace"], ["Spin", "Spin"]];
+  $("#kind-lab").textContent = role === "batters" ? "Batting hand" : "Bowling type";
+  $("#kind").innerHTML = kinds.map(([v, n]) => `<button type="button" class="chip" data-v="${v}" aria-pressed="${state.kind.has(v)}">${n}</button>`).join("");
+  document.querySelectorAll("#cap button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === state.cap));
+  $("#minn").value = state.minn; $("#minn-v").textContent = state.minn;
+  $("#q").value = state.q;
+}
+
+function filtered() {
+  const q = state.q.trim().toLowerCase();
+  return DATA[state.role].filter(p => {
+    if (q && !(p.name.toLowerCase().includes(q) || (p.ipl_team || "").toLowerCase().includes(q) || (p.country || "").toLowerCase().includes(q))) return false;
+    if (state.country && p.country !== state.country) return false;
+    if (state.cap === "capped" && !p.capped) return false;
+    if (state.cap === "uncapped" && p.capped) return false;
+    if (state.pos.size) {
+      if (state.role === "batters" && !state.pos.has(p.position)) return false;
+      if (state.role === "bowlers" && ![...state.pos].some(ph => (p.phase_tags || []).includes(ph))) return false;
+    }
+    if (state.kind.size) {
+      const k = state.role === "batters" ? p.hand : p.pace_spin;
+      if (!state.kind.has(k)) return false;
+    }
+    if (p.n < state.minn) return false;
+    return true;
+  });
+}
+function sortRows(rows) {
+  const k = state.sort, dir = state.asc ? 1 : -1;
+  return rows.slice().sort((a, b) => {
+    const va = a[k], vb = b[k];
+    if (k === "name") return (state.asc ? 1 : -1) * a.name.localeCompare(b.name);
+    if (va == null && vb == null) return a.rank - b.rank;
+    if (va == null) return 1; if (vb == null) return -1;
+    return dir * (va - vb) || a.rank - b.rank;
+  });
+}
+
+const COLS = {
+  batters: [["#", null, "pos"], ["Player", "name"], ["Position", "bat_pos"], ["Reliability", "reliability"], ["Pressure level (90% range)", "level"],
+            ["Impact", "impact", "r"], ["Consistency", "consistency", "r"], ["Breadth", "breadth", "r"], ["HP balls", "n", "r"], ["P(top 10)", "p_top10", "r"], ["Overall", "rank", "r"]],
+  bowlers: [["#", null, "pos"], ["Player", "name"], ["Phase", null], ["Reliability", "reliability"], ["Pressure level (90% range)", "level"],
+            ["Impact", "impact", "r"], ["Consistency", "consistency", "r"], ["Economy", "economy", "r"], ["HP balls", "n", "r"], ["P(top 10)", "p_top10", "r"], ["Overall", "rank", "r"]]
+};
+function renderHead() {
+  $("#thead").innerHTML = COLS[state.role].map(([n, k, c]) => {
+    if (!k) return `<th scope="col" class="${c || ""}"><span style="display:block;padding:10px">${n}</span></th>`;
+    const sorted = state.sort === k;
+    const aria = sorted ? (state.asc ? "ascending" : "descending") : "none";
+    return `<th scope="col" class="${c || ""}" aria-sort="${aria}"><button type="button" data-k="${k}">${n}</button></th>`;
+  }).join("");
+  document.querySelectorAll("#thead button").forEach(b => b.addEventListener("click", () => {
+    const k = b.dataset.k === "rank" ? "reliability" : b.dataset.k;
+    if (state.sort === k) state.asc = !state.asc; else { state.sort = k; state.asc = ASC.has(k) || k === "bat_pos"; }
+    if (SORTS[state.role].some(s => s[0] === k)) $("#sort").value = k;
+    render();
+  }));
+}
+
+function ciSVG(p) {
+  const [lo, hi] = RANGE[state.role].ci, W = 150, X = v => 6 + (W - 12) * (v - lo) / (hi - lo);
+  return `<svg class="ci" width="${W}" height="22" viewBox="0 0 ${W} 22" aria-hidden="true">
+    <line x1="${X(0)}" x2="${X(0)}" y1="2" y2="20" stroke="var(--line)" stroke-width="1.5"/>
+    <line x1="${X(p.level_lo90)}" x2="${X(p.level_hi90)}" y1="11" y2="11" stroke="var(--p2)" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="${X(p.level)}" cy="11" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="1.5"/></svg>`;
+}
+function relBar(p) {
+  const [a, b] = RANGE[state.role].rel, w = 100 * (p.reliability - a) / (b - a);
+  return `<div class="relbar"><span class="track"><span class="fill" style="width:${Math.max(3, w).toFixed(1)}%"></span></span><span class="num">${fmt(p.reliability, 2)}</span></div>`;
+}
+function capPill(p) {
+  return p.capped ? `<span class="pill cap">Capped${p.caps ? " · " + p.caps + " T20I" : ""}</span>` : `<span class="pill unc">Uncapped</span>`;
+}
+function phaseCell(p) {
+  const tags = (p.phase_tags || []).map(t => `<span class="pill ph">${t}</span>`).join(" ");
+  return `<div style="display:flex;gap:4px;flex-wrap:wrap;min-width:190px">${tags || '<span class="pill">Mixed</span>'}</div><span class="small muted">main: ${p.primary_phase} · ${p.pace_spin || ""}</span>`;
+}
+function row(p, i) {
+  const sub = [p.country, p.ipl_team ? p.ipl_team + (p.ipl_season ? " '" + String(p.ipl_season).slice(2) : "") : null].filter(Boolean).join(" · ");
+  const third = state.role === "batters"
+    ? `<span>${esc(p.position)}</span><span class="small muted" style="display:block">${p.hand === "LHB" ? "Left-handed" : p.hand === "RHB" ? "Right-handed" : ""}${p.bat_pos ? " · median " + fmt(p.bat_pos, 1) : ""}</span>`
+    : phaseCell(p);
+  const eighth = state.role === "batters" ? pct(p.breadth) : fmt(p.economy, 2);
+  return `<tr class="row" data-id="${p.player_id}">
+    <td class="pos num">${i + 1}</td>
+    <td class="who"><button type="button" aria-expanded="${state.open === p.player_id}" data-id="${p.player_id}">${esc(p.name)}</button>
+      <span class="sub">${esc(sub)} ${capPill(p)}</span></td>
+    <td>${third}</td>
+    <td>${relBar(p)}</td>
+    <td><div style="display:flex;align-items:center;gap:8px">${ciSVG(p)}<span class="num">${sgn(p.level)}</span></div></td>
+    <td class="r num">${sgn(p.impact)}</td>
+    <td class="r num">${pct(p.consistency)}</td>
+    <td class="r num">${eighth}</td>
+    <td class="r num">${p.n}</td>
+    <td class="r num">${p.p_top10 == null ? "–" : pct(p.p_top10)}</td>
+    <td class="r num">${p.rank}</td></tr>` + (state.open === p.player_id ? detail(p) : "");
+}
+function ctxBars(items) {
+  const vals = items.map(i => i[1]).filter(v => v != null), m = Math.max(10, ...vals.map(Math.abs));
+  return items.map(([n, v]) => {
+    if (v == null) return `<div style="display:grid;grid-template-columns:150px 1fr 54px;gap:8px;align-items:center;font-size:13px"><span>${n}</span><span class="muted">too few balls</span><span></span></div>`;
+    const w = 50 * Math.abs(v) / m, left = v >= 0 ? 50 : 50 - w;
+    return `<div style="display:grid;grid-template-columns:150px 1fr 54px;gap:8px;align-items:center;font-size:13px"><span>${n}</span>
+      <span style="position:relative;height:10px;background:var(--soft);border-radius:5px"><span style="position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted)"></span>
+      <span style="position:absolute;left:${left}%;width:${w}%;top:0;bottom:0;border-radius:5px;background:${v >= 0 ? "var(--p3)" : "var(--neg)"}"></span></span>
+      <span class="num" style="text-align:right">${sgn(v)}</span></div>`;
+  }).join("");
+}
+function detail(p) {
+  const bat = state.role === "batters";
+  const ctx = bat ? [["Chasing", p.level_chasing], ["Setting a total", p.level_setting], ["Death overs", p.level_death], ["After a collapse", p.level_collapse_entry], ["Against spin", p.level_vs_spin], ["Against pace", p.level_vs_pace]]
+                  : [["Powerplay", p.level_powerplay], ["Middle overs", p.level_middle], ["Death overs", p.level_death], ["Defending a total", p.level_defending], ["Bowling first", p.level_bowling_first], ["Against a set batter", p.level_vs_set_batter]];
+  const lg = DATA.meta.league_phase_share;
+  const phaseShare = bat ? "" : `<h3 style="margin-top:16px">Where he bowls</h3>
+    <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;gap:2px;margin:6px 0">
+      <span style="flex:${p.share_pp};background:var(--p2)" title="Powerplay"></span><span style="flex:${p.share_middle};background:var(--p3)" title="Middle"></span><span style="flex:${p.share_death};background:var(--p4)" title="Death"></span></div>
+    <p class="small muted" style="margin:0">Powerplay ${pct(p.share_pp)} · middle ${pct(p.share_middle)} · death ${pct(p.share_death)}<br>League: ${pct(lg.pp)} · ${pct(lg.middle)} · ${pct(lg.death)}</p>`;
+  const src = {data: "from T20I appearances in the data", manual: "status corrected by hand (capped in other formats or before 2022)", inferred: "no international appearance found"}[p.cap_src];
+  return `<tr class="detail"><td colspan="11"><div class="detail-grid">
+    <div><h3>Pressure level by situation</h3><p class="small muted" style="margin:0 0 8px">Runs ${bat ? "above expectation" : "saved"} per 100 high-pressure balls in each situation.</p>${ctxBars(ctx)}${phaseShare}</div>
+    <div><h3>Reliability breakdown</h3><dl class="kv">
+      <dt>Pressure level</dt><dd class="num">${sgn(p.level)} (90%: ${sgn(p.level_lo90)} to ${sgn(p.level_hi90)})</dd>
+      <dt>All-round ability</dt><dd class="num">${sgn(p.level_base)}</dd>
+      <dt>Extra under pressure</dt><dd class="num">${sgn(p.clutch_delta)}</dd>
+      <dt>Chance above average</dt><dd class="num">${pct(p.p_above_avg)}</dd>
+      <dt>Impact</dt><dd class="num">${sgn(p.impact)} win-% points / 100 balls</dd>
+      <dt>Consistency</dt><dd class="num">${pct(p.consistency)} of ${p.n_inn} ${bat ? "innings" : "spells"}</dd>
+      <dt>Breadth</dt><dd class="num">${pct(p.breadth)}</dd>
+      <dt>Rank range (90%)</dt><dd class="num">${p.rank_p05 == null ? "–" : fmt(p.rank_p05, 0) + " to " + fmt(p.rank_p95, 0)}</dd></dl></div>
+    <div><h3>Profile</h3><dl class="kv">
+      <dt>Country</dt><dd>${esc(p.country)}</dd>
+      <dt>Status</dt><dd>${p.capped ? "Capped" : "Uncapped"}</dd>
+      <dt>T20I in data</dt><dd class="num">${p.caps}</dd>
+      <dt>Latest IPL side</dt><dd>${esc(p.ipl_team || "–")}${p.ipl_season ? " (" + p.ipl_season + ")" : ""}</dd>
+      <dt>IPL matches</dt><dd class="num">${p.ipl_matches}</dd>
+      <dt>Seasons</dt><dd class="num">${p.seasons}</dd>
+      <dt>${bat ? "Runs / 100 HP balls" : "Economy (HP)"}</dt><dd class="num">${bat ? fmt(p.runs_per100, 0) : fmt(p.economy, 2)}</dd>
+      <dt>Avg leverage faced</dt><dd class="num">${fmt(p.avg_LI, 2)}</dd>
+      ${bat ? "" : `<dt>Type</dt><dd>${esc(p.bowl_type)}</dd>`}</dl>
+      <p class="small muted" style="margin:10px 0 0">Status ${src}.${p.note ? " " + esc(p.note) : ""}</p></div>
+  </div></td></tr>`;
+}
+
+function render() {
+  renderHead();
+  const rows = sortRows(filtered());
+  const total = DATA[state.role].length, label = state.role === "batters" ? "batters" : "bowlers";
+  const nCap = rows.filter(p => p.capped).length;
+  $("#count").textContent = `Showing ${rows.length} of ${total} ${label} · ${nCap} capped, ${rows.length - nCap} uncapped`;
+  $("#tbody").innerHTML = rows.length ? rows.map(row).join("") :
+    `<tr><td colspan="11" class="empty">No ${label} match these filters. Clear a filter or lower the minimum balls.</td></tr>`;
+  document.querySelectorAll("#tbody .who button").forEach(b => b.addEventListener("click", () => {
+    const id = +b.dataset.id; state.open = state.open === id ? null : id; render();
+    const btn = document.querySelector(`#tbody .who button[data-id="${id}"]`); if (btn) btn.focus();
+  }));
+  const ph = [...state.pos];
+  $("#phase-hint").textContent = state.role === "bowlers" && ph.length === 1 && state.sort !== PHASE_KEY[ph[0]]
+    ? `Tip: sort by "Pressure level, ${ph[0].toLowerCase()}" to rank these bowlers on that phase only.` : "";
+}
+
+/* ---------- wiring ---------- */
+function switchRole(role) {
+  if (state.role === role) return;
+  Object.assign(state, {role, country: "", pos: new Set(), kind: new Set(), sort: "reliability", asc: false, open: null});
+  $("#tab-batters").setAttribute("aria-selected", role === "batters");
+  $("#tab-bowlers").setAttribute("aria-selected", role === "bowlers");
+  setupControls(); render();
+}
+$("#tab-batters").addEventListener("click", () => switchRole("batters"));
+$("#tab-bowlers").addEventListener("click", () => switchRole("bowlers"));
+document.querySelector(".tabs").addEventListener("keydown", e => {
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") { const r = state.role === "batters" ? "bowlers" : "batters"; switchRole(r); $("#tab-" + r).focus(); }
+});
+$("#q").addEventListener("input", e => { state.q = e.target.value; render(); });
+$("#country").addEventListener("change", e => { state.country = e.target.value; render(); });
+$("#sort").addEventListener("change", e => { state.sort = e.target.value; state.asc = ASC.has(state.sort); render(); });
+$("#minn").addEventListener("input", e => { state.minn = +e.target.value; $("#minn-v").textContent = state.minn; render(); });
+$("#cap").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; state.cap = b.dataset.v;
+  document.querySelectorAll("#cap button").forEach(x => x.setAttribute("aria-pressed", x === b)); render(); });
+for (const [id, key] of [["#pos", "pos"], ["#kind", "kind"]]) {
+  $(id).addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const v = b.dataset.v, s = state[key];
+    s.has(v) ? s.delete(v) : s.add(v); b.setAttribute("aria-pressed", s.has(v));
+    if (key === "pos" && state.role === "bowlers" && s.size === 1) { state.sort = PHASE_KEY[[...s][0]]; state.asc = false; $("#sort").value = state.sort; }
+    if (key === "pos" && state.role === "bowlers" && s.size !== 1 && state.sort.startsWith("level_")) { state.sort = "reliability"; $("#sort").value = "reliability"; }
+    render(); });
+}
+$("#reset").addEventListener("click", () => {
+  Object.assign(state, {q: "", country: "", cap: "all", pos: new Set(), kind: new Set(), minn: 0, sort: "reliability", asc: false, open: null});
+  setupControls(); render();
+});
+
+function drawAll() { drawWorm(); drawHeat(); }
+drawRecipe("bat2"); drawBands(); drawAll(); setupControls(); render();
+try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawAll); } catch (e) {}
+new MutationObserver(drawAll).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+</script>
+</body>
+</html>
